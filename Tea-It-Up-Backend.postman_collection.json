@@ -1,0 +1,1665 @@
+{
+  "info": {
+    "name": "Tea-It-Up Backend API",
+    "description": "Golf tee-time booking platform API (Express + MongoDB/Mongoose).\n\nBase URL: {{serverUrl}}, mounted API prefix: {{baseUrl}} = {{serverUrl}}/api/v1.\n\nAuth: Bearer access token in the Authorization header (collection-level auth uses {{accessToken}}, auto-captured by the Register/Login requests' test scripts). The refresh token is a separate httpOnly, signed cookie — enable Postman's cookie jar for /auth/refresh-token and /auth/logout.\n\nSuggested run order for a full happy path: Health Check -> Register (or Login as SUPER_ADMIN seeded via SUPER_ADMIN_EMAIL/PASSWORD) -> Admin: Create Club -> Login as the new course manager -> Admin: Approve Club -> Bulk Create Tee Times -> Create Booking -> Confirm Booking -> Record Payment.\n\nRoles (see user.constant.ts): SUPER_ADMIN, ADMIN, COURSE_MANAGER, STAFF, USER.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [],
+  "variable": [
+    {
+      "key": "serverUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "baseUrl",
+      "value": "{{serverUrl}}/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "resetTicket",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "sessionId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseSlug",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseManagerEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseManagerPassword",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "teeTimeId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "bookingId",
+      "value": "",
+      "type": "string",
+      "description": "Mongo _id, used in path params"
+    },
+    {
+      "key": "publicBookingId",
+      "value": "",
+      "type": "string",
+      "description": "Human-readable booking reference (e.g. TIU-88291-ZX), used for guest lookup"
+    },
+    {
+      "key": "guestEmail",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "mediaId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "notificationId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Root",
+      "description": "Endpoints mounted outside /api/v1 directly on the Express app.",
+      "item": [
+        {
+          "name": "Landing Page (HTML)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{serverUrl}}/",
+              "host": [
+                "{{serverUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Renders the server landing page HTML (app.ts root route). Not a JSON API endpoint.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{serverUrl}}/health",
+              "host": [
+                "{{serverUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Returns { success, statusCode, message, data: { uptime } }. Use to verify the API is up before running the rest of the collection.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Registration, login, token refresh, password reset, and session management. Refresh token is an httpOnly signed cookie (REFRESH_TOKEN_COOKIE) — enable Postman's cookie jar for /auth/refresh-token and /auth/logout to work.",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "description": "Creates a USER account. Sets the refresh token cookie and returns an access token.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jordan Player\",\n  \"email\": \"jordan.player@example.com\",\n  \"phone\": \"+1 555 0100\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "    pm.collectionVariables.set('userId', data.user._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Logs in any role (USER, COURSE_MANAGER, ADMIN, SUPER_ADMIN). Use the matching account credentials for the role you want to test.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jordan.player@example.com\",\n  \"password\": \"Password123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.collectionVariables.set('accessToken', data.accessToken);",
+                  "    pm.collectionVariables.set('userId', data.user._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh Access Token",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh-token",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh-token"
+              ]
+            },
+            "description": "Reads the signed httpOnly refresh-token cookie set by Register/Login and issues a new access token + rotated refresh cookie. Requires Postman cookie jar (automatic in Postman desktop/web when cookies are enabled for localhost).",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('accessToken', pm.response.json().data.accessToken);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "description": "Revokes the current refresh token (from cookie) and clears the cookie.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "description": "Always returns 200 regardless of whether the email exists. Sends an OTP to the email if an account exists.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jordan.player@example.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify OTP",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "verify-otp"
+              ]
+            },
+            "description": "Verifies the 6-digit OTP sent via Forgot Password and returns a one-time resetTicket for Reset Password.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"jordan.player@example.com\",\n  \"otp\": \"123456\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    pm.collectionVariables.set('resetTicket', pm.response.json().data.resetTicket);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/reset-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ]
+            },
+            "description": "Consumes the resetTicket from Verify OTP to set a new password.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resetTicket\": \"{{resetTicket}}\",\n  \"password\": \"NewPassword123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/change-password",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "change-password"
+              ]
+            },
+            "description": "Requires Bearer access token. Also the one route exempted from the \"must reset temporary password\" guard, so admin-provisioned accounts can call this first.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"Password123!\",\n  \"newPassword\": \"NewPassword123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List My Sessions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/sessions",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "sessions"
+              ]
+            },
+            "description": "Lists active refresh-token sessions (device/IP/user-agent) for the authenticated user."
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const sessions = pm.response.json().data;",
+                  "    if (Array.isArray(sessions) && sessions.length) {",
+                  "        pm.collectionVariables.set('sessionId', sessions[0]._id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Revoke Session",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/sessions/{{sessionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "sessions",
+                "{{sessionId}}"
+              ]
+            },
+            "description": "Revokes a specific session by id (log out a specific device)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Self-service profile endpoints plus ADMIN/SUPER_ADMIN user management.",
+      "item": [
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/me",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "me"
+              ]
+            },
+            "description": "Both fields optional — send only what changes.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Jordan A. Player\",\n  \"phone\": \"+1 555 0199\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List All Users (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users?page=1&limit=20&search=&role=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Matches name/email",
+                  "disabled": true
+                },
+                {
+                  "key": "role",
+                  "value": "",
+                  "description": "USER | COURSE_MANAGER | ADMIN | SUPER_ADMIN | STAFF",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Requires ADMIN or SUPER_ADMIN role."
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Status (Admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/users/{{userId}}/status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "users",
+                "{{userId}}",
+                "status"
+              ]
+            },
+            "description": "Activates/deactivates a user account. Requires ADMIN or SUPER_ADMIN role.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isActive\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Golf Courses",
+      "description": "Public course browsing plus ADMIN onboarding and COURSE_MANAGER self-editing.",
+      "item": [
+        {
+          "name": "List Public Courses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses?page=1&limit=12&search=&priceMin=&priceMax=&session=EARLY_MORNING&players=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "12",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "priceMin",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "priceMax",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "session",
+                  "value": "EARLY_MORNING",
+                  "description": "EARLY_MORNING | MIDDAY | AFTERNOON | TWILIGHT",
+                  "disabled": true
+                },
+                {
+                  "key": "players",
+                  "value": "",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Only APPROVED courses are returned. No auth required — backs explore-clubs on the website.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List Featured Courses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/featured",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "featured"
+              ]
+            },
+            "description": "Backs the homepage \"featured clubs\" section.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Course By Slug",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseSlug}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseSlug}}"
+              ]
+            },
+            "description": "Public course detail page. Backs explore-clubs/[id].",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Admin: List All Courses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/admin/all?page=1&limit=20&search=&status=PENDING",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "admin",
+                "all"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING",
+                  "description": "PENDING | APPROVED | REJECTED (see course.constant.ts)",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Requires ADMIN or SUPER_ADMIN. Includes courses in every status, not just APPROVED."
+          },
+          "response": []
+        },
+        {
+          "name": "Admin: Create Club (provisions Course Manager)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            },
+            "description": "Requires ADMIN or SUPER_ADMIN. Creates a new COURSE_MANAGER account plus a PENDING course in one request — backs AllClubs.tsx's \"Create New Club\" modal. The manager must change their temporary password on first login.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maple Creek Golf Club\",\n  \"email\": \"manager@maplecreek.example.com\",\n  \"password\": \"TempPass123!\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.collectionVariables.set('courseId', data._id);",
+                  "    pm.collectionVariables.set('courseSlug', data.slug);",
+                  "    const reqBody = JSON.parse(pm.request.body.raw);",
+                  "    pm.collectionVariables.set('courseManagerEmail', reqBody.email);",
+                  "    pm.collectionVariables.set('courseManagerPassword', reqBody.password);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Admin: Approve Club",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}/approve",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}",
+                "approve"
+              ]
+            },
+            "description": "Requires ADMIN or SUPER_ADMIN. Moves a PENDING course to APPROVED; isFeatured is optional.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"isFeatured\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Course Manager: Get My Course",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "mine"
+              ]
+            },
+            "description": "Requires COURSE_MANAGER role. Returns the course owned by the authenticated manager."
+          },
+          "response": []
+        },
+        {
+          "name": "Course Manager: Update My Course",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "mine"
+              ]
+            },
+            "description": "Requires COURSE_MANAGER role. Every field is optional — backs EditClub.tsx in full. Image fields take Media _ids (see Media folder for upload).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Maple Creek Golf Club\",\n  \"location\": \"Asheville, NC\",\n  \"summary\": \"A scenic 18-hole championship course in the Blue Ridge foothills.\",\n  \"description\": \"Maple Creek Golf Club offers a championship-caliber 18-hole layout...\",\n  \"heroImage\": \"{{mediaId}}\",\n  \"stats\": {\n    \"yardage\": \"7,012 yds\",\n    \"par\": 72,\n    \"slope\": 132,\n    \"rating\": 74.1,\n    \"holes\": 18,\n    \"tees\": 5,\n    \"elevation\": \"420 ft\",\n    \"avgTime\": \"4h 15m\",\n    \"courseType\": \"Championship\",\n    \"difficulty\": \"Advanced\"\n  },\n  \"sellingPoints\": [\n    {\n      \"title\": \"Signature 7th Hole\",\n      \"description\": \"A risk-reward par 3 over water.\"\n    }\n  ],\n  \"facilities\": [\n    {\n      \"name\": \"Driving Range\",\n      \"description\": \"Heated bays open year-round.\"\n    }\n  ],\n  \"signatureHole\": {\n    \"number\": \"7\",\n    \"name\": \"The Gauntlet\",\n    \"par\": 3,\n    \"yardage\": 187,\n    \"notes\": \"Island green guarded by water on three sides.\",\n    \"image\": \"{{mediaId}}\"\n  },\n  \"gallery\": [\n    \"{{mediaId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "description": "Mounted at /courses/:id/reviews — nested under a course.",
+      "item": [
+        {
+          "name": "List Reviews For Course",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}/reviews?page=1&limit=10",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}",
+                "reviews"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "10",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/courses/{{courseId}}/reviews",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "courses",
+                "{{courseId}}",
+                "reviews"
+              ]
+            },
+            "description": "Requires USER role. images is an array of Media _ids (max 6), optional.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 5,\n  \"comment\": \"Immaculate greens and a fantastic back nine. Will be back!\",\n  \"images\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tee Times",
+      "description": "Slot management for COURSE_MANAGER, read access for ADMIN/SUPER_ADMIN.",
+      "item": [
+        {
+          "name": "List Tee Times",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tee-times?page=1&limit=20&date=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tee-times"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "date",
+                  "value": "",
+                  "description": "ISO date, e.g. 2026-07-04",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "COURSE_MANAGER sees only their own course's slots; ADMIN/SUPER_ADMIN see every course's slots."
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Create Tee Times",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tee-times/bulk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tee-times",
+                "bulk"
+              ]
+            },
+            "description": "Requires COURSE_MANAGER role. One date per schedule, multiple {from, to} slot pairs per schedule — matches AddTeaTime.tsx's nested field-array shape. bookingType: INSTANT | SHARED_CART | MEMBER_ONLY (optional).",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schedules\": [\n    {\n      \"date\": \"2026-07-04\",\n      \"slots\": [\n        {\n          \"from\": \"07:00\",\n          \"to\": \"07:10\",\n          \"price\": 65,\n          \"capacity\": 4,\n          \"bookingType\": \"INSTANT\"\n        },\n        {\n          \"from\": \"07:10\",\n          \"to\": \"07:20\",\n          \"price\": 65,\n          \"capacity\": 4,\n          \"bookingType\": \"INSTANT\"\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const teeTimes = pm.response.json().data;",
+                  "    if (Array.isArray(teeTimes) && teeTimes.length) {",
+                  "        pm.collectionVariables.set('teeTimeId', teeTimes[0]._id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update Tee Time",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tee-times/{{teeTimeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tee-times",
+                "{{teeTimeId}}"
+              ]
+            },
+            "description": "Requires COURSE_MANAGER role (must own the slot's course). All fields optional.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"price\": 70,\n  \"capacity\": 4,\n  \"status\": \"ACTIVE\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Tee Time",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/tee-times/{{teeTimeId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "tee-times",
+                "{{teeTimeId}}"
+              ]
+            },
+            "description": "Requires COURSE_MANAGER role (must own the slot's course)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Bookings",
+      "description": "Booking creation (guest or signed-in), guest lookup, and staff request management.",
+      "item": [
+        {
+          "name": "Create Booking (Guest or Signed-in)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ]
+            },
+            "description": "optionalAuth: works for guests (no Authorization header) or signed-in USERs (send Bearer token to attach the booking to the account). Matches Reserve.tsx exactly. agreeToTerms must be literal true.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"teeTimeId\": \"{{teeTimeId}}\",\n  \"fullName\": \"Jordan Player\",\n  \"phoneNumber\": \"+1 555 0100\",\n  \"email\": \"jordan.player@example.com\",\n  \"holesPreference\": \"18\",\n  \"players\": 2,\n  \"specialRequests\": \"Two carts please.\",\n  \"agreeToTerms\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const data = pm.response.json().data;",
+                  "    pm.collectionVariables.set('bookingId', data._id);",
+                  "    pm.collectionVariables.set('publicBookingId', data.bookingId);",
+                  "    pm.collectionVariables.set('guestEmail', data.contact.email);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Lookup Booking (Guest)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/lookup?email={{guestEmail}}&bookingId={{publicBookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "lookup"
+              ],
+              "query": [
+                {
+                  "key": "email",
+                  "value": "{{guestEmail}}",
+                  "disabled": false
+                },
+                {
+                  "key": "bookingId",
+                  "value": "{{publicBookingId}}",
+                  "description": "Human-readable id, e.g. TIU-88291-ZX — not the Mongo _id",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": "No auth required. Backs Bookings.tsx's \"track a booking\" form.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "List My Bookings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/mine?page=1&limit=20&status=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "mine"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "PENDING | CONFIRMED | DECLINED | CANCELLED",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Requires USER role and a signed-in booking history."
+          },
+          "response": []
+        },
+        {
+          "name": "List Booking Requests (Staff)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings?page=1&limit=20&status=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "PENDING | CONFIRMED | DECLINED | CANCELLED",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "Requires COURSE_MANAGER, ADMIN, or SUPER_ADMIN. Backs Requests.tsx in the dashboard."
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Booking",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}/confirm",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}",
+                "confirm"
+              ]
+            },
+            "description": "Requires COURSE_MANAGER role (must own the booking's course)."
+          },
+          "response": []
+        },
+        {
+          "name": "Decline Booking",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}/decline",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}",
+                "decline"
+              ]
+            },
+            "description": "Requires COURSE_MANAGER role (must own the booking's course)."
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel My Booking",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/bookings/{{bookingId}}/cancel",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bookings",
+                "{{bookingId}}",
+                "cancel"
+              ]
+            },
+            "description": "Requires USER role (must own the booking)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Memberships",
+      "description": "Self-service membership tier for signed-in players.",
+      "item": [
+        {
+          "name": "Get My Membership",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/memberships/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "memberships",
+                "mine"
+              ]
+            },
+            "description": "Requires USER role."
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Membership Tier",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/memberships/mine",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "memberships",
+                "mine"
+              ]
+            },
+            "description": "Requires USER role. tier: STANDARD | PREMIUM | ELITE.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tier\": \"PREMIUM\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payments",
+      "description": "Record and retrieve a payment for a booking.",
+      "item": [
+        {
+          "name": "Record Payment For Booking",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "{{bookingId}}"
+              ]
+            },
+            "description": "optionalAuth. method: GUEST_CHECKOUT | CARD | MEMBERSHIP_CREDIT.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"method\": \"CARD\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Payment For Booking",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payments/{{bookingId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "payments",
+                "{{bookingId}}"
+              ]
+            },
+            "description": "optionalAuth.",
+            "auth": {
+              "type": "noauth"
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Media",
+      "description": "File uploads backing course images, avatars, and review photos.",
+      "item": [
+        {
+          "name": "Upload Media",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/media/upload",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "media",
+                "upload"
+              ]
+            },
+            "description": "multipart/form-data. Select a file for the \"file\" field in Postman before sending. Stored locally under UPLOAD_DIR by default (MEDIA_PROVIDER=LOCAL), served from /uploads.",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "type",
+                  "value": "COURSE_GALLERY",
+                  "type": "text",
+                  "description": "COURSE_HERO | COURSE_GALLERY | SIGNATURE_HOLE | USER_AVATAR | REVIEW_IMAGE"
+                },
+                {
+                  "key": "relatedTo",
+                  "value": "{{courseId}}",
+                  "type": "text",
+                  "description": "Optional — id of the related Course/User/Review"
+                },
+                {
+                  "key": "relatedModel",
+                  "value": "Course",
+                  "type": "text",
+                  "description": "Optional — Course | User | Review"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('mediaId', pm.response.json().data._id);",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete Media",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/media/{{mediaId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "media",
+                "{{mediaId}}"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "In-app notifications for the signed-in user.",
+      "item": [
+        {
+          "name": "List My Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications?page=1&limit=20",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1",
+                  "disabled": false
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "disabled": false
+                }
+              ]
+            },
+            "description": ""
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const notifications = pm.response.json().data;",
+                  "    if (Array.isArray(notifications) && notifications.length) {",
+                  "        pm.collectionVariables.set('notificationId', notifications[0]._id);",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark Notification Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/notifications/{{notificationId}}/read",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "notifications",
+                "{{notificationId}}",
+                "read"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Admin-portal analytics. Requires COURSE_MANAGER, ADMIN, or SUPER_ADMIN for every route in this folder.",
+      "item": [
+        {
+          "name": "Get Stats",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "stats"
+              ]
+            },
+            "description": "Backs GeneralState.tsx's 4 stat cards (Total/Pending/Confirmed/Declined Requests)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Requests Overview",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/requests-overview",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "requests-overview"
+              ]
+            },
+            "description": "Backs RequestOverview.tsx's 7-day AreaChart."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Booking Status Breakdown",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/booking-status",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "booking-status"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tee Time Utilization",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/dashboard/tee-time-utilization",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "dashboard",
+                "tee-time-utilization"
+              ]
+            },
+            "description": ""
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
