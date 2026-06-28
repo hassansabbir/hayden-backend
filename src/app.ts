@@ -31,6 +31,10 @@ app.use(
         connectSrc: ["'self'"],
       },
     },
+    // /uploads is served by this same app and is meant to be loaded by the
+    // website/dashboard frontends, which run on different ports/origins.
+    // Helmet's default "same-origin" policy blocks <img> loads cross-origin.
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
   })
 );
 app.use(

@@ -126,7 +126,10 @@ export const getCourseBySlug = async (slug: string): Promise<ICourse> => {
 };
 
 export const getMyCourse = async (ownerId: string): Promise<ICourse> => {
-  const course = await Course.findOne({ owner: ownerId });
+  const course = await Course.findOne({ owner: ownerId })
+    .populate('heroImage')
+    .populate('gallery')
+    .populate('signatureHole.image');
   if (!course) throw new AppError(404, 'No course is associated with this account');
   return course;
 };
@@ -139,7 +142,10 @@ export const updateMyCourse = async (
     { owner: ownerId },
     { ...payload, updatedBy: ownerId },
     { new: true, runValidators: true }
-  );
+  )
+    .populate('heroImage')
+    .populate('gallery')
+    .populate('signatureHole.image');
   if (!course) throw new AppError(404, 'No course is associated with this account');
   return course;
 };
