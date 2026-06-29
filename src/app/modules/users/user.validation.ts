@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const updateMeSchema = z.object({
   fullName: z.string().min(2).max(80).optional(),
   phone: z.string().min(5).max(20).optional(),
+  avatar: z.string().min(1).nullable().optional(),
 });
 
 export const updateUserStatusSchema = z.object({

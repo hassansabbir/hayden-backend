@@ -34,6 +34,21 @@ const envSchema = z.object({
   
   SUPER_ADMIN_EMAIL: z.string().email().optional(),
   SUPER_ADMIN_PASSWORD: z.string().min(8).optional(),
+
+  // Optional so the server can still boot before these are filled in —
+  // the contact-form/mailer endpoints fail with a clear 503 instead until then.
+  SMTP_HOST: z.string().default('smtp.gmail.com'),
+  SMTP_PORT: z.coerce.number().default(587),
+  // NOT z.coerce.boolean() — Boolean("false") is `true` in JS, so that would
+  // silently turn SMTP_SECURE=false into true and break the SMTP handshake.
+  SMTP_SECURE: z
+    .enum(['true', 'false'])
+    .default('false')
+    .transform((value) => value === 'true'),
+  SMTP_USER: z.string().optional(),
+  SMTP_PASS: z.string().optional(),
+  MAIL_FROM: z.string().optional(),
+  CONTACT_RECEIVER_EMAIL: z.string().email().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

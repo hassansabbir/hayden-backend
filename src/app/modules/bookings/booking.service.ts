@@ -102,7 +102,7 @@ export const listMyBookings = async (userId: string, filters: PaginationQuery & 
       .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
       .skip(skip)
       .limit(limit)
-      .populate('course', 'name heroImage')
+      .populate({ path: 'course', select: 'name heroImage', populate: { path: 'heroImage', select: 'url' } })
       .populate('teeTime'),
     Booking.countDocuments(whereClause),
   ]);

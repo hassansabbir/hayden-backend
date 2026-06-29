@@ -10,11 +10,13 @@ import { paymentRoutes } from '../modules/payments/payment.route';
 import { mediaRoutes } from '../modules/media/media.route';
 import { notificationRoutes } from '../modules/notifications/notification.route';
 import { dashboardRoutes } from '../modules/dashboard/dashboard.route';
+import { contactRoutes } from '../modules/contact/contact.route';
 
 const router = Router();
 
 const moduleRoutes: { path: string; route: Router }[] = [
   { path: '/auth', route: authRoutes },
+  { path: '/contact', route: contactRoutes },
   { path: '/users', route: userRoutes },
   { path: '/courses', route: courseRoutes },
   { path: '/courses/:id/reviews', route: reviewRoutes },
