@@ -83,18 +83,48 @@ interface ListCoursesFilters extends PaginationQuery {
   search?: string;
   priceMin?: string;
   priceMax?: string;
+  session?: string;
+  players?: string;
+  holes?: string;
 }
 
 export const listPublicCourses = async (filters: ListCoursesFilters) => {
   const { page, limit, skip, sortBy, sortOrder } = calculatePagination(filters);
 
   const conditions: Record<string, unknown>[] = [{ status: COURSE_STATUS.ACTIVE }];
-  if (filters.search) conditions.push({ $text: { $search: filters.search } });
+  if (filters.search) {
+    conditions.push({
+      $or: [
+        { name: { $regex: filters.search, $options: 'i' } },
+        { location: { $regex: filters.search, $options: 'i' } },
+      ],
+    });
+  }
   if (filters.priceMin || filters.priceMax) {
     const priceFilter: Record<string, number> = {};
     if (filters.priceMin) priceFilter.$gte = Number(filters.priceMin);
     if (filters.priceMax) priceFilter.$lte = Number(filters.priceMax);
     conditions.push({ 'priceRange.min': priceFilter });
+  }
+
+  if (filters.holes) {
+    conditions.push({ 'stats.holes': Number(filters.holes) });
+  }
+
+  if (filters.session || filters.players) {
+    const teeTimeQuery: Record<string, any> = { status: 'ACTIVE' };
+    if (filters.session) {
+      teeTimeQuery.session = filters.session;
+    }
+    if (filters.players) {
+      const neededPlayers = Number(filters.players);
+      teeTimeQuery.$expr = {
+        $gte: [{ $subtract: ['$capacity', '$bookedCount'] }, neededPlayers]
+      };
+    }
+    const matchingTeeTimes = await TeeTime.find(teeTimeQuery).select('course');
+    const courseIds = matchingTeeTimes.map((t) => t.course);
+    conditions.push({ _id: { $in: courseIds } });
   }
 
   const whereClause = { $and: conditions };
@@ -159,7 +189,14 @@ export const adminListCourses = async (filters: AdminListCoursesFilters) => {
   const { page, limit, skip, sortBy, sortOrder } = calculatePagination(filters);
 
   const conditions: Record<string, unknown>[] = [];
-  if (filters.search) conditions.push({ $text: { $search: filters.search } });
+  if (filters.search) {
+    conditions.push({
+      $or: [
+        { name: { $regex: filters.search, $options: 'i' } },
+        { location: { $regex: filters.search, $options: 'i' } },
+      ],
+    });
+  }
   if (filters.status) conditions.push({ status: filters.status });
 
   const whereClause = conditions.length ? { $and: conditions } : {};
@@ -169,7 +206,9 @@ export const adminListCourses = async (filters: AdminListCoursesFilters) => {
       .sort({ [sortBy]: sortOrder === 'asc' ? 1 : -1 })
       .skip(skip)
       .limit(limit)
-      .populate('owner', 'fullName email'),
+      .populate('owner', 'fullName email')
+      .populate('heroImage')
+      .populate('signatureHole.image'),
     Course.countDocuments(whereClause),
   ]);
 
@@ -185,7 +224,15 @@ export const adminListCourses = async (filters: AdminListCoursesFilters) => {
     location: course.location,
     owner: course.owner,
     status: course.status,
+    isFeatured: course.isFeatured,
     teeTimeCount: countByCourse.get(String(course._id)) ?? 0,
+    summary: course.summary,
+    description: course.description,
+    heroImage: course.heroImage,
+    stats: course.stats,
+    signatureHole: course.signatureHole,
+    sellingPoints: course.sellingPoints,
+    facilities: course.facilities,
   }));
 
   return { courses: rows, meta: buildMeta(page, limit, total) };
@@ -223,4 +270,28 @@ export const approveCourse = async (
   );
 
   return course;
+};
+
+export const getPublicTeeTimes = async (slug: string, dateStr?: string) => {
+  const course = await Course.findOne({ slug, status: COURSE_STATUS.ACTIVE });
+  if (!course) {
+    throw new AppError(404, 'Course not found');
+  }
+
+  const whereClause: Record<string, any> = {
+    course: course._id,
+    status: 'ACTIVE',
+  };
+
+  if (dateStr) {
+    const day = new Date(dateStr);
+    const nextDay = new Date(day);
+    nextDay.setDate(day.getDate() + 1);
+    whereClause.date = { $gte: day, $lt: nextDay };
+  }
+
+  const teeTimes = await TeeTime.find(whereClause)
+    .sort({ date: 1, startTime: 1 });
+
+  return teeTimes;
 };

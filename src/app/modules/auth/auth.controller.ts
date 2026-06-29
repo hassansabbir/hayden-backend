@@ -4,7 +4,7 @@ import { sendResponse } from '../../utils/sendResponse';
 import { AppError } from '../../errors/AppError';
 import { env } from '../../config/env';
 import * as authService from './auth.service';
-import { REFRESH_TOKEN_COOKIE } from './auth.constant';
+import { CLIENT_APP_HEADER, getClientApp, getRefreshTokenCookieName } from './auth.constant';
 
 const cookieOptions = {
   httpOnly: true,
@@ -18,13 +18,15 @@ const requestMeta = (req: Request) => ({
   ip: req.ip,
 });
 
-const setRefreshCookie = (res: Response, token: string) => {
-  res.cookie(REFRESH_TOKEN_COOKIE, token, cookieOptions);
+const refreshCookieName = (req: Request) => getRefreshTokenCookieName(getClientApp(req.headers[CLIENT_APP_HEADER]));
+
+const setRefreshCookie = (req: Request, res: Response, token: string) => {
+  res.cookie(refreshCookieName(req), token, cookieOptions);
 };
 
 export const register = catchAsync(async (req: Request, res: Response) => {
   const result = await authService.register(req.body, requestMeta(req));
-  setRefreshCookie(res, result.tokens.refreshToken);
+  setRefreshCookie(req, res, result.tokens.refreshToken);
   sendResponse(res, {
     statusCode: 201,
     message: 'Account created successfully',
@@ -35,7 +37,7 @@ export const register = catchAsync(async (req: Request, res: Response) => {
 export const login = catchAsync(async (req: Request, res: Response) => {
   const { email, password } = req.body;
   const result = await authService.login(email, password, requestMeta(req));
-  setRefreshCookie(res, result.tokens.refreshToken);
+  setRefreshCookie(req, res, result.tokens.refreshToken);
   sendResponse(res, {
     statusCode: 200,
     message: 'Logged in successfully',
@@ -44,11 +46,11 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const refreshToken = catchAsync(async (req: Request, res: Response) => {
-  const token = req.signedCookies?.[REFRESH_TOKEN_COOKIE];
+  const token = req.signedCookies?.[refreshCookieName(req)];
   if (!token) throw new AppError(401, 'No active session found');
 
   const tokens = await authService.refreshAccessToken(token, requestMeta(req));
-  setRefreshCookie(res, tokens.refreshToken);
+  setRefreshCookie(req, res, tokens.refreshToken);
   sendResponse(res, {
     statusCode: 200,
     message: 'Access token refreshed',
@@ -57,9 +59,10 @@ export const refreshToken = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const logout = catchAsync(async (req: Request, res: Response) => {
-  const token = req.signedCookies?.[REFRESH_TOKEN_COOKIE];
+  const cookieName = refreshCookieName(req);
+  const token = req.signedCookies?.[cookieName];
   if (token) await authService.logout(token);
-  res.clearCookie(REFRESH_TOKEN_COOKIE);
+  res.clearCookie(cookieName);
   sendResponse(res, { statusCode: 200, message: 'Logged out successfully', data: null });
 });
 

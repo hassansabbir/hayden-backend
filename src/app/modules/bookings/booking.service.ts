@@ -84,7 +84,7 @@ export const createBooking = async (
 
 export const lookupBooking = async (email: string, bookingId: string): Promise<IBooking> => {
   const booking = await Booking.findOne({ bookingId, 'contact.email': email.toLowerCase() })
-    .populate('course', 'name')
+    .populate('course', 'name location heroImage')
     .populate('teeTime');
 
   if (!booking) throw new AppError(404, 'No booking found for that email and booking ID');

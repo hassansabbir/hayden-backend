@@ -12,6 +12,7 @@ import {
   createCourseSchema,
   listCoursesQuerySchema,
   updateMyCourseSchema,
+  getPublicTeeTimesQuerySchema,
 } from './course.validation';
 
 const router = Router();
@@ -50,6 +51,12 @@ router.patch(
   requireRole(ROLE.COURSE_MANAGER),
   validateRequest({ body: updateMyCourseSchema }),
   courseController.updateMyCourse
+);
+
+router.get(
+  '/:slug/tee-times',
+  validateRequest({ params: courseSlugParamSchema, query: getPublicTeeTimesQuerySchema }),
+  courseController.getPublicTeeTimes
 );
 
 // Slug route last — it's a public catch-most path among GET /courses/*.

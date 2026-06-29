@@ -16,7 +16,7 @@ export const apiRateLimiter = rateLimit({
 // Tighter limit for brute-force-sensitive auth endpoints (login, OTP, reset).
 export const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  limit: 10,
+  limit: 100,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

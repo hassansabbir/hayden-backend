@@ -77,6 +77,7 @@ export const listCoursesQuerySchema = z.object({
   priceMax: z.string().optional(),
   session: z.enum(['EARLY_MORNING', 'MIDDAY', 'AFTERNOON', 'TWILIGHT']).optional(),
   players: z.string().optional(),
+  holes: z.string().optional(),
 });
 
 export const adminListCoursesQuerySchema = z.object({
@@ -84,4 +85,8 @@ export const adminListCoursesQuerySchema = z.object({
   limit: z.string().optional(),
   search: z.string().optional(),
   status: z.string().optional(),
+});
+
+export const getPublicTeeTimesQuerySchema = z.object({
+  date: z.string().optional(),
 });

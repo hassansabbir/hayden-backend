@@ -42,3 +42,8 @@ export const approveCourse = catchAsync(async (req: Request, res: Response) => {
   const course = await courseService.approveCourse(req.user!.userId, req.params.id, req.body.isFeatured);
   sendResponse(res, { statusCode: 200, message: 'Club approved successfully', data: course });
 });
+
+export const getPublicTeeTimes = catchAsync(async (req: Request, res: Response) => {
+  const teeTimes = await courseService.getPublicTeeTimes(req.params.slug, req.query.date as string);
+  sendResponse(res, { statusCode: 200, message: 'Tee times retrieved successfully', data: teeTimes });
+});
