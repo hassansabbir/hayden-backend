@@ -170,7 +170,7 @@ export const getLandingPageHtml = (port: number, envName: string): string => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tea-It-Up API Service</title>
+  <title>Tee-It-Up API Service</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -635,7 +635,7 @@ export const getLandingPageHtml = (port: number, envName: string): string => {
       <div class="logo-container">
         <span class="logo-icon">⛳</span>
         <div class="logo-text">
-          <h1>Tea-It-Up</h1>
+          <h1>Tee-It-Up</h1>
           <p>REST API Platform v1.0.0</p>
         </div>
       </div>
@@ -670,7 +670,7 @@ export const getLandingPageHtml = (port: number, envName: string): string => {
       <section class="api-explorer">
         <div class="explorer-header">
           <h2>API Endpoint Explorer</h2>
-          <p>Explore the endpoints supported by the Tea-It-Up gateway. Click tabs to filter.</p>
+          <p>Explore the endpoints supported by the Tee-It-Up gateway. Click tabs to filter.</p>
         </div>
 
         <div class="tabs-wrapper">
@@ -687,7 +687,7 @@ export const getLandingPageHtml = (port: number, envName: string): string => {
     </main>
 
     <footer>
-      <p>&copy; ${new Date().getFullYear()} Tea-It-Up. All rights reserved. | <a href="/health" target="_blank">View /health JSON</a></p>
+      <p>&copy; ${new Date().getFullYear()} Tee-It-Up. All rights reserved. | <a href="/health" target="_blank">View /health JSON</a></p>
     </footer>
   </div>
 

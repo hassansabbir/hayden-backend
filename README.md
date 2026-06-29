@@ -1,6 +1,6 @@
-# Tea-It-Up Backend — Local Setup Guide
+# Tee-It-Up Backend — Local Setup Guide
 
-Express + TypeScript + MongoDB API for the Tea-It-Up golf tee-time booking
+Express + TypeScript + MongoDB API for the Tee-It-Up golf tee-time booking
 platform. This document covers everything needed to run the project on your
 own machine. For *why* things are designed the way they are, see
 [ARCHITECTURE.md](./ARCHITECTURE.md). For running this in production, see
@@ -106,7 +106,7 @@ You should see:
 
 ```
 [timestamp] info: MongoDB connected
-[timestamp] info: Tea-It-Up backend listening on port 5000 (development)
+[timestamp] info: Tee-It-Up backend listening on port 5000 (development)
 ```
 
 `ts-node-dev` watches `src/` and restarts automatically on save.
@@ -132,11 +132,11 @@ Every account created through `POST /api/v1/auth/register` is a plain
 # 1. Register a normal account through the API
 curl -X POST http://localhost:5000/api/v1/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"fullName":"Platform Admin","email":"admin@teaitup.com","password":"Admin@123"}'
+  -d '{"fullName":"Platform Admin","email":"admin@teeitup.com","password":"Admin@123"}'
 
 # 2. Promote that one user to ADMIN directly in the database
 mongosh "mongodb://localhost:27017/tea-it-up" --eval \
-  'db.users.updateOne({ email: "admin@teaitup.com" }, { $set: { role: "ADMIN" } })'
+  'db.users.updateOne({ email: "admin@teeitup.com" }, { $set: { role: "ADMIN" } })'
 ```
 
 Log in again after the promotion (`POST /auth/login`) — the role is baked

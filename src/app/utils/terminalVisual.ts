@@ -43,7 +43,7 @@ export const printTerminalDashboard = (port: number, env: string, superAdminStat
 
   console.log('\n' + banner + '\n');
   console.log(borderTop);
-  console.log(line(`\x1b[1mTea-It-Up Backend Service\x1b[0m`, `v1.0.0`, `\x1b[32m`));
+  console.log(line(`\x1b[1mTee-It-Up Backend Service\x1b[0m`, `v1.0.0`, `\x1b[32m`));
   console.log(borderDivider);
   console.log(line(`Status`, `ONLINE`, `\x1b[1;32m`));
   console.log(line(`Environment`, env.toUpperCase(), env === 'production' ? `\x1b[1;31m` : `\x1b[1;33m`));

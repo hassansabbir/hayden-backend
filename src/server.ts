@@ -15,7 +15,7 @@ const bootstrap = async (): Promise<void> => {
   const superAdminStatus = await seedSuperAdmin();
 
   server = app.listen(env.PORT, () => {
-    logger.info(`Tea-It-Up backend listening on port ${env.PORT} (${env.NODE_ENV})`);
+    logger.info(`Tee-It-Up backend listening on port ${env.PORT} (${env.NODE_ENV})`);
     printTerminalDashboard(env.PORT, env.NODE_ENV, superAdminStatus);
   });
 };

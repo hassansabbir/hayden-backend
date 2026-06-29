@@ -19,7 +19,7 @@ const buildAdminNotificationEmail = (payload: ContactMessagePayload): string =>
     previewText: `New ${payload.inquiryType} inquiry from ${payload.fullName}`,
     heading: 'New Contact Form Submission',
     bodyHtml: `
-      <p>You've received a new inquiry through the Tea It Up website contact form.</p>
+      <p>You've received a new inquiry through the Tee It Up website contact form.</p>
       ${renderInfoTable([
         { label: 'Name', value: escapeHtml(payload.fullName) },
         { label: 'Email', value: escapeHtml(payload.email) },
@@ -37,12 +37,12 @@ const buildSenderConfirmationEmail = (payload: ContactMessagePayload): string =>
     heading: "We've Received Your Message",
     bodyHtml: `
       <p>Hi ${escapeHtml(payload.fullName)},</p>
-      <p>Thank you for reaching out to Tea It Up. Our concierge team has received your inquiry and will get back to you within 1–2 business days.</p>
+      <p>Thank you for reaching out to Tee It Up. Our concierge team has received your inquiry and will get back to you within 1–2 business days.</p>
       ${renderInfoTable([{ label: 'Inquiry Type', value: escapeHtml(payload.inquiryType) }])}
       <p style="font-weight:700;margin:0 0 8px;">Your Message</p>
       ${renderQuoteBlock(escapeHtml(payload.message))}
       <p>If you have any additional details to share, please submit a new message through our contact form.</p>
-      <p style="margin-top:24px;">Warm regards,<br/>The Tea It Up Concierge Team</p>
+      <p style="margin-top:24px;">Warm regards,<br/>The Tee It Up Concierge Team</p>
     `,
   });
 
@@ -66,7 +66,7 @@ export const sendContactMessage = async (payload: ContactMessagePayload): Promis
   try {
     await sendMail({
       to: payload.email,
-      subject: "We've received your message — Tea It Up",
+      subject: "We've received your message — Tee It Up",
       html: buildSenderConfirmationEmail(payload),
     });
   } catch (err) {

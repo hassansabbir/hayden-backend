@@ -28,8 +28,8 @@ export const renderEmailLayout = ({ previewText, heading, bodyHtml }: EmailLayou
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 4px 24px rgba(10,74,27,0.06);">
             <tr>
               <td style="background-color:${BRAND_DARK_GREEN};padding:32px 32px 24px;text-align:center;">
-                <img src="cid:tiu-logo" alt="Tea It Up" width="56" height="auto" style="display:block;margin:0 auto 12px;border-radius:12px;" />
-                <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:1px;">TEA IT UP</span>
+                <img src="cid:tiu-logo" alt="Tee It Up" width="56" height="auto" style="display:block;margin:0 auto 12px;border-radius:12px;" />
+                <span style="color:#ffffff;font-size:18px;font-weight:700;letter-spacing:1px;">TEE IT UP</span>
               </td>
             </tr>
             <tr>
@@ -44,14 +44,14 @@ export const renderEmailLayout = ({ previewText, heading, bodyHtml }: EmailLayou
               <td style="padding:28px 32px 32px;">
                 <hr style="border:none;border-top:1px solid #ececec;margin:0 0 20px;" />
                 <p style="margin:0;font-size:12px;color:${BRAND_MUTED};">
-                  This is an automated message from Tea It Up. Please do not reply directly unless instructed.
+                  This is an automated message from Tee It Up. Please do not reply directly unless instructed.
                 </p>
               </td>
             </tr>
             <tr>
               <td style="background-color:${BRAND_SOFT_BG};padding:18px 32px;text-align:center;">
                 <p style="margin:0;font-size:12px;color:${BRAND_MUTED};">
-                  © ${new Date().getFullYear()} Tea It Up. All rights reserved.
+                  © ${new Date().getFullYear()} Tee It Up. All rights reserved.
                 </p>
               </td>
             </tr>
