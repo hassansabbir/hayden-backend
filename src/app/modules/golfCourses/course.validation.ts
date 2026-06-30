@@ -43,6 +43,11 @@ const signatureHoleSchema = z.object({
   image: z.string().min(1),
 });
 
+const holeVideoSchema = z.object({
+  holeNumber: z.number().int().min(1).max(18),
+  url: z.string().url(),
+});
+
 // Backs EditClub.tsx in full — every field the club-owner form submits.
 export const updateMyCourseSchema = z.object({
   name: z.string().min(2).max(120).optional(),
@@ -55,6 +60,7 @@ export const updateMyCourseSchema = z.object({
   facilities: z.array(facilitySchema).max(12).optional(),
   signatureHole: signatureHoleSchema.optional(),
   gallery: z.array(z.string().min(1)).max(20).optional(),
+  holeVideos: z.array(holeVideoSchema).max(18).optional(),
 });
 
 export const approveCourseSchema = z.object({

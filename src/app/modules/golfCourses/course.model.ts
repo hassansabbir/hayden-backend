@@ -47,6 +47,14 @@ const signatureHoleSchema = new Schema(
   { _id: false }
 );
 
+const holeVideoSchema = new Schema(
+  {
+    holeNumber: { type: Number, required: true, min: 1, max: 18 },
+    url: { type: String, required: true },
+  },
+  { _id: false }
+);
+
 const priceRangeSchema = new Schema(
   {
     min: { type: Number, default: 0 },
@@ -97,6 +105,14 @@ const courseSchema = new Schema<ICourse>(
         validator: (value: unknown[]) => value.length <= 20,
         message: 'A course gallery can have at most 20 images',
       },
+    },
+    holeVideos: {
+      type: [holeVideoSchema],
+      validate: {
+        validator: (value: unknown[]) => value.length <= 18,
+        message: 'A course can have at most 18 hole videos',
+      },
+      default: [],
     },
     priceRange: { type: priceRangeSchema, default: () => ({ min: 0, max: 0 }) },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },

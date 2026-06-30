@@ -33,6 +33,11 @@ export interface ISignatureHole {
   image: Types.ObjectId;
 }
 
+export interface IHoleVideo {
+  holeNumber: number;
+  url: string;
+}
+
 export interface IPriceRange {
   min: number;
   max: number;
@@ -55,6 +60,7 @@ export interface ICourse extends Document {
   facilities: IFacility[];
   signatureHole?: ISignatureHole;
   gallery: Types.ObjectId[];
+  holeVideos: IHoleVideo[];
   priceRange: IPriceRange;
   createdBy?: Types.ObjectId;
   updatedBy?: Types.ObjectId;
