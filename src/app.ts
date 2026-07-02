@@ -19,6 +19,8 @@ import { getLandingPageHtml } from './app/utils/landingPageHtml';
 
 const app: Application = express();
 
+app.set('trust proxy', true);
+
 app.use(
   helmet({
     contentSecurityPolicy: {
@@ -39,7 +41,14 @@ app.use(
 );
 app.use(
   cors({
-    origin: [env.CLIENT_WEBSITE_URL, env.CLIENT_DASHBOARD_URL],
+    origin: [
+      env.CLIENT_WEBSITE_URL,
+      env.CLIENT_DASHBOARD_URL,
+      "http://localhost:3000",
+      "http://localhost:3001",
+      "https://sabbir3000.naimulhassan.me",
+      "https://sabbir3001.naimulhassan.me"
+    ],
     credentials: true,
   })
 );

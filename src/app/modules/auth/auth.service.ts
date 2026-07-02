@@ -44,7 +44,7 @@ const issueTokens = async (user: IUser, meta: RequestMeta) => {
 
 // Minimal "30d" / "15m" style duration parser — avoids pulling in a whole
 // date-math dependency for one conversion.
-const parseDurationMs = (duration: string): number => {
+export const parseDurationMs = (duration: string): number => {
   const match = /^(\d+)([smhd])$/.exec(duration);
   if (!match) return 30 * 24 * 60 * 60 * 1000;
 

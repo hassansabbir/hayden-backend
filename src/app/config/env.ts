@@ -17,6 +17,7 @@ const envSchema = z.object({
   BCRYPT_SALT_ROUNDS: z.coerce.number().default(12),
 
   COOKIE_SECRET: z.string().min(16, 'COOKIE_SECRET must be at least 16 characters'),
+  COOKIE_DOMAIN: z.string().optional(),
 
   CLIENT_WEBSITE_URL: z.string().url(),
   CLIENT_DASHBOARD_URL: z.string().url(),

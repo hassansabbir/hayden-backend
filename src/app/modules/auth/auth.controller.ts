@@ -4,13 +4,25 @@ import { sendResponse } from '../../utils/sendResponse';
 import { AppError } from '../../errors/AppError';
 import { env } from '../../config/env';
 import * as authService from './auth.service';
+import { parseDurationMs } from './auth.service';
 import { CLIENT_APP_HEADER, getClientApp, getRefreshTokenCookieName } from './auth.constant';
 
-const cookieOptions = {
-  httpOnly: true,
-  secure: env.NODE_ENV === 'production',
-  sameSite: 'strict' as const,
-  signed: true,
+const getCookieOptions = (req: Request) => {
+  const isSecure =
+    env.NODE_ENV === 'production' ||
+    req.secure ||
+    req.headers['x-forwarded-proto'] === 'https';
+  const options: any = {
+    httpOnly: true,
+    secure: isSecure,
+    sameSite: 'lax' as const,
+    signed: true,
+    maxAge: parseDurationMs(env.JWT_REFRESH_EXPIRES_IN),
+  };
+  if (env.COOKIE_DOMAIN) {
+    options.domain = env.COOKIE_DOMAIN;
+  }
+  return options;
 };
 
 const requestMeta = (req: Request) => ({
@@ -21,7 +33,7 @@ const requestMeta = (req: Request) => ({
 const refreshCookieName = (req: Request) => getRefreshTokenCookieName(getClientApp(req.headers[CLIENT_APP_HEADER]));
 
 const setRefreshCookie = (req: Request, res: Response, token: string) => {
-  res.cookie(refreshCookieName(req), token, cookieOptions);
+  res.cookie(refreshCookieName(req), token, getCookieOptions(req));
 };
 
 export const register = catchAsync(async (req: Request, res: Response) => {
@@ -62,7 +74,7 @@ export const logout = catchAsync(async (req: Request, res: Response) => {
   const cookieName = refreshCookieName(req);
   const token = req.signedCookies?.[cookieName];
   if (token) await authService.logout(token);
-  res.clearCookie(cookieName);
+  res.clearCookie(cookieName, getCookieOptions(req));
   sendResponse(res, { statusCode: 200, message: 'Logged out successfully', data: null });
 });
 
