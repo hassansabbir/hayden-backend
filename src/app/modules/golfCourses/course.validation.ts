@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { HOLES_OPTIONS } from './course.constant';
 
 // Backs AllClubs.tsx's "Create New Club" modal — provisions a new
 // COURSE_MANAGER account plus a PENDING course in one request.
@@ -10,37 +9,35 @@ export const createCourseSchema = z.object({
 });
 
 const statsSchema = z.object({
-  yardage: z.string().min(1),
-  par: z.coerce.number().min(27).max(90),
-  slope: z.coerce.number().min(55).max(155),
-  rating: z.coerce.number().min(0).max(100),
-  holes: z.coerce.number().refine((v) => (HOLES_OPTIONS as readonly number[]).includes(v), {
-    message: 'holes must be 9 or 18',
-  }),
-  tees: z.coerce.number().min(1),
-  elevation: z.string().min(1),
-  avgTime: z.string().min(1),
-  courseType: z.string().min(1),
-  difficulty: z.string().min(1),
+  yardage: z.string().optional(),
+  par: z.coerce.number().optional(),
+  slope: z.coerce.number().optional(),
+  rating: z.coerce.number().optional(),
+  holes: z.coerce.number().optional(),
+  tees: z.coerce.number().optional(),
+  elevation: z.string().optional(),
+  avgTime: z.string().optional(),
+  courseType: z.string().optional(),
+  difficulty: z.string().optional(),
 });
 
 const sellingPointSchema = z.object({
-  title: z.string().min(1).max(120),
-  description: z.string().min(1).max(500),
+  title: z.string().max(120).optional(),
+  description: z.string().max(500).optional(),
 });
 
 const facilitySchema = z.object({
-  name: z.string().min(1).max(120),
-  description: z.string().min(1).max(300),
+  name: z.string().max(120).optional(),
+  description: z.string().max(300).optional(),
 });
 
 const signatureHoleSchema = z.object({
-  number: z.string().min(1),
-  name: z.string().min(1),
-  par: z.coerce.number(),
-  yardage: z.coerce.number(),
-  notes: z.string().min(1).max(1000),
-  image: z.string().min(1),
+  number: z.string().optional(),
+  name: z.string().optional(),
+  par: z.coerce.number().optional(),
+  yardage: z.coerce.number().optional(),
+  notes: z.string().max(1000).optional(),
+  image: z.string().optional(),
 });
 
 const holeVideoSchema = z.object({
@@ -49,17 +46,20 @@ const holeVideoSchema = z.object({
 });
 
 // Backs EditClub.tsx in full — every field the club-owner form submits.
+// Note: summary/description/heroImage allow empty string so the club owner
+// can save a partially-completed draft without triggering validation errors.
+// Completeness is enforced at approval time (see course.service.ts).
 export const updateMyCourseSchema = z.object({
   name: z.string().min(2).max(120).optional(),
   location: z.string().min(1).optional(),
-  summary: z.string().min(1).max(300).optional(),
-  description: z.string().min(1).max(4000).optional(),
-  heroImage: z.string().min(1).optional(),
+  summary: z.string().max(300).or(z.literal('')).optional(),
+  description: z.string().max(4000).or(z.literal('')).optional(),
+  heroImage: z.string().or(z.literal('')).optional(),
   stats: statsSchema.optional(),
-  sellingPoints: z.array(sellingPointSchema).min(1).max(6).optional(),
+  sellingPoints: z.array(sellingPointSchema).max(6).optional(),
   facilities: z.array(facilitySchema).max(12).optional(),
   signatureHole: signatureHoleSchema.optional(),
-  gallery: z.array(z.string().min(1)).max(20).optional(),
+  gallery: z.array(z.string()).max(20).optional(),
   holeVideos: z.array(holeVideoSchema).max(18).optional(),
 });
 

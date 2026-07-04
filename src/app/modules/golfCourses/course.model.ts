@@ -5,44 +5,44 @@ import { softDeletePlugin } from '../../utils/softDeletePlugin';
 
 const statsSchema = new Schema(
   {
-    yardage: { type: String, required: true },
-    par: { type: Number, required: true, min: 27, max: 90 },
-    slope: { type: Number, required: true, min: 55, max: 155 },
-    rating: { type: Number, required: true },
-    holes: { type: Number, required: true, enum: HOLES_OPTIONS },
-    tees: { type: Number, required: true, min: 1 },
-    elevation: { type: String, required: true },
-    avgTime: { type: String, required: true },
-    courseType: { type: String, required: true },
-    difficulty: { type: String, required: true },
+    yardage: { type: String, required: false },
+    par: { type: Number, required: false, min: 27, max: 90 },
+    slope: { type: Number, required: false, min: 55, max: 155 },
+    rating: { type: Number, required: false },
+    holes: { type: Number, required: false, enum: HOLES_OPTIONS },
+    tees: { type: Number, required: false, min: 1 },
+    elevation: { type: String, required: false },
+    avgTime: { type: String, required: false },
+    courseType: { type: String, required: false },
+    difficulty: { type: String, required: false },
   },
   { _id: false }
 );
 
 const sellingPointSchema = new Schema(
   {
-    title: { type: String, required: true, maxlength: 120 },
-    description: { type: String, required: true, maxlength: 500 },
+    title: { type: String, required: false, maxlength: 120 },
+    description: { type: String, required: false, maxlength: 500 },
   },
   { _id: false }
 );
 
 const facilitySchema = new Schema(
   {
-    name: { type: String, required: true, maxlength: 120 },
-    description: { type: String, required: true, maxlength: 300 },
+    name: { type: String, required: false, maxlength: 120 },
+    description: { type: String, required: false, maxlength: 300 },
   },
   { _id: false }
 );
 
 const signatureHoleSchema = new Schema(
   {
-    number: { type: String, required: true },
-    name: { type: String, required: true },
-    par: { type: Number, required: true },
-    yardage: { type: Number, required: true },
-    notes: { type: String, required: true, maxlength: 1000 },
-    image: { type: Schema.Types.ObjectId, ref: 'Media', required: true },
+    number: { type: String, required: false },
+    name: { type: String, required: false },
+    par: { type: Number, required: false },
+    yardage: { type: Number, required: false },
+    notes: { type: String, required: false, maxlength: 1000 },
+    image: { type: Schema.Types.ObjectId, ref: 'Media', required: false },
   },
   { _id: false }
 );
