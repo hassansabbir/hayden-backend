@@ -30,7 +30,6 @@ router.get(
 router.get(
   '/mine',
   auth,
-  requireRole(ROLE.USER),
   validateRequest({ query: listBookingsQuerySchema }),
   bookingController.listMyBookings
 );
@@ -62,7 +61,6 @@ router.patch(
 router.patch(
   '/:id/cancel',
   auth,
-  requireRole(ROLE.USER),
   validateRequest({ params: bookingIdParamSchema }),
   bookingController.cancelMyBooking
 );
