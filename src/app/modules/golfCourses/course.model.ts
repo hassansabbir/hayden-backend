@@ -1,56 +1,56 @@
 import { Schema, model } from 'mongoose';
 import { ICourse } from './course.interface';
-import { COURSE_STATUS, COURSE_STATUSES, HOLES_OPTIONS } from './course.constant';
+import { COURSE_STATUS, COURSE_STATUSES } from './course.constant';
 import { softDeletePlugin } from '../../utils/softDeletePlugin';
 
 const statsSchema = new Schema(
   {
-    yardage: { type: String, required: true },
-    par: { type: Number, required: true, min: 27, max: 90 },
-    slope: { type: Number, required: true, min: 55, max: 155 },
-    rating: { type: Number, required: true },
-    holes: { type: Number, required: true, enum: HOLES_OPTIONS },
-    tees: { type: Number, required: true, min: 1 },
-    elevation: { type: String, required: true },
-    avgTime: { type: String, required: true },
-    courseType: { type: String, required: true },
-    difficulty: { type: String, required: true },
+    yardage: { type: String, default: '' },
+    par: { type: Number, default: 0 },
+    slope: { type: Number, default: 0 },
+    rating: { type: Number, default: 0 },
+    holes: { type: Number, default: 0 },
+    tees: { type: Number, default: 0 },
+    elevation: { type: String, default: '' },
+    avgTime: { type: String, default: '' },
+    courseType: { type: String, default: '' },
+    difficulty: { type: String, default: '' },
   },
   { _id: false }
 );
 
 const sellingPointSchema = new Schema(
   {
-    title: { type: String, required: true, maxlength: 120 },
-    description: { type: String, required: true, maxlength: 500 },
+    title: { type: String, maxlength: 120, default: '' },
+    description: { type: String, maxlength: 500, default: '' },
   },
   { _id: false }
 );
 
 const facilitySchema = new Schema(
   {
-    name: { type: String, required: true, maxlength: 120 },
-    description: { type: String, required: true, maxlength: 300 },
+    name: { type: String, maxlength: 120, default: '' },
+    description: { type: String, maxlength: 300, default: '' },
   },
   { _id: false }
 );
 
 const signatureHoleSchema = new Schema(
   {
-    number: { type: String, required: true },
-    name: { type: String, required: true },
-    par: { type: Number, required: true },
-    yardage: { type: Number, required: true },
-    notes: { type: String, required: true, maxlength: 1000 },
-    image: { type: Schema.Types.ObjectId, ref: 'Media', required: true },
+    number: { type: String, default: '' },
+    name: { type: String, default: '' },
+    par: { type: Number, default: 0 },
+    yardage: { type: Number, default: 0 },
+    notes: { type: String, maxlength: 1000, default: '' },
+    image: { type: Schema.Types.ObjectId, ref: 'Media' },
   },
   { _id: false }
 );
 
 const holeVideoSchema = new Schema(
   {
-    holeNumber: { type: Number, required: true, min: 1, max: 18 },
-    url: { type: String, required: true },
+    holeNumber: { type: Number, default: 0 },
+    url: { type: String, default: '' },
   },
   { _id: false }
 );

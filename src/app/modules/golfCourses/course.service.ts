@@ -10,6 +10,10 @@ import { calculatePagination, buildMeta, PaginationQuery } from '../../utils/pag
 import { TeeTime } from '../teeTimes/teeTime.model';
 import { recordAuditLog } from '../auditLogs/auditLog.service';
 import { createNotification } from '../notifications/notification.service';
+import { sendMail } from '../../utils/mailer';
+import { renderClubWelcomeEmail, renderClubApprovedEmail, renderAdminCourseApprovedEmail } from '../../utils/emailTemplates';
+import { env } from '../../config/env';
+import { logger } from '../../config/logger';
 
 const ensureUniqueSlug = async (name: string): Promise<string> => {
   const base = slugify(name);
@@ -36,8 +40,8 @@ export const createCourseWithOwner = async (
   const slug = await ensureUniqueSlug(payload.name);
 
   const session = await mongoose.startSession();
+  let course: ICourse;
   try {
-    let course: ICourse;
     await session.withTransaction(async () => {
       const [owner] = await User.create(
         [
@@ -72,11 +76,28 @@ export const createCourseWithOwner = async (
 
       course = createdCourse;
     });
-
-    return course!;
   } finally {
     await session.endSession();
   }
+
+  // Transaction committed — fire the welcome email outside the session so a
+  // transient SMTP failure never rolls back or 500s the club creation response.
+  try {
+    await sendMail({
+      to: payload.email,
+      subject: 'Welcome to Tee It Up — your club account is ready',
+      html: renderClubWelcomeEmail({
+        clubName: payload.name,
+        email: payload.email,
+        password: payload.password,   // plain text, captured before the pre-save hash
+        loginUrl: `${env.CLIENT_DASHBOARD_URL}/sign-in`,
+      }),
+    });
+  } catch (err) {
+    logger.error('Failed to send club welcome email', { err, to: payload.email });
+  }
+
+  return course!;
 };
 
 interface ListCoursesFilters extends PaginationQuery {
@@ -238,8 +259,6 @@ export const adminListCourses = async (filters: AdminListCoursesFilters) => {
   return { courses: rows, meta: buildMeta(page, limit, total) };
 };
 
-const REQUIRED_FOR_ACTIVE: (keyof ICourse)[] = ['summary', 'description', 'heroImage', 'stats', 'signatureHole'];
-
 export const approveCourse = async (
   adminId: string,
   courseId: string,
@@ -247,14 +266,6 @@ export const approveCourse = async (
 ): Promise<ICourse> => {
   const course = await Course.findById(courseId);
   if (!course) throw new AppError(404, 'Course not found');
-
-  const missing = REQUIRED_FOR_ACTIVE.filter((field) => !course[field]);
-  if (missing.length > 0) {
-    throw new AppError(
-      400,
-      `Course profile is incomplete — missing: ${missing.join(', ')}. The owner must finish the Edit Club form before approval.`
-    );
-  }
 
   course.status = COURSE_STATUS.ACTIVE;
   if (isFeatured !== undefined) course.isFeatured = isFeatured;
@@ -269,6 +280,37 @@ export const approveCourse = async (
     `${course.name} is now live and accepting bookings.`
   );
 
+  // Send approval email to the club owner and a confirmation to the admin (best-effort).
+  try {
+    const owner = await User.findById(course.owner).select('email fullName');
+    const admin = await User.findById(adminId).select('email');
+
+    if (owner) {
+      await sendMail({
+        to: owner.email,
+        subject: `Great news — ${course.name} is now live on Tee It Up!`,
+        html: renderClubApprovedEmail({
+          clubName: course.name,
+          ownerName: owner.fullName,
+          dashboardUrl: `${env.CLIENT_DASHBOARD_URL}`,
+        }),
+      });
+    }
+
+    if (admin && owner) {
+      await sendMail({
+        to: admin.email,
+        subject: `Course Approved: ${course.name}`,
+        html: renderAdminCourseApprovedEmail({
+          clubName: course.name,
+          clubEmail: owner.email,
+        }),
+      });
+    }
+  } catch (err) {
+    logger.error('Failed to send club approval emails', { err, courseId: course.id });
+  }
+
   return course;
 };
 
@@ -281,6 +323,7 @@ export const getPublicTeeTimes = async (slug: string, dateStr?: string) => {
   const whereClause: Record<string, any> = {
     course: course._id,
     status: 'ACTIVE',
+    bookedCount: 0,
   };
 
   if (dateStr) {

@@ -13,6 +13,8 @@ import { logger } from '../../config/logger';
 import { ILoginResult, IResetTicketPayload } from './auth.interface';
 import { RESET_TICKET_EXPIRES_IN } from './auth.constant';
 import { createNotification } from '../notifications/notification.service';
+import { sendMail } from '../../utils/mailer';
+import { renderOtpEmail } from '../../utils/emailTemplates';
 
 const hashRefreshToken = (token: string): string => crypto.createHash('sha256').update(token).digest('hex');
 
@@ -164,8 +166,25 @@ export const forgotPassword = async (email: string): Promise<void> => {
 
   await OtpToken.create({ email: user.email, otpHash, purpose: 'PASSWORD_RESET', expiresAt });
 
-  // Email delivery isn't wired up yet — logged so the flow is testable end-to-end locally.
+  // Send the OTP to the user's inbox (best-effort — non-fatal if SMTP fails;
+  // the OTP is also logged below so the flow stays testable without SMTP).
+  try {
+    await sendMail({
+      to: user.email,
+      subject: 'Your Tee It Up password reset code',
+      html: renderOtpEmail({
+        fullName: user.fullName,
+        otp,
+        expiresInMinutes: env.OTP_EXPIRES_IN_MINUTES,
+      }),
+    });
+  } catch (err) {
+    logger.error('Failed to send OTP email', { err, to: user.email });
+  }
+
+  // Keep the log for local dev / SMTP-less environments.
   logger.info(`OTP for ${user.email}: ${otp}`);
+
   await createNotification(
     user.id,
     'OTP_ISSUED',

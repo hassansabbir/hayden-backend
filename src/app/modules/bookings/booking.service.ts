@@ -9,6 +9,9 @@ import { calculatePagination, buildMeta, PaginationQuery } from '../../utils/pag
 import { BOOKING_FEE, BOOKING_STATUS, TAX_RATE } from './booking.constant';
 import { ROLE } from '../users/user.constant';
 import { createNotification } from '../notifications/notification.service';
+import { sendMail } from '../../utils/mailer';
+import { renderBookingNotificationEmail } from '../../utils/emailTemplates';
+import { User } from '../users/user.model';
 
 interface CreateBookingInput {
   teeTimeId: string;
@@ -27,7 +30,7 @@ export const createBooking = async (
 ): Promise<IBooking> => {
   const session = await mongoose.startSession();
   try {
-    let booking: IBooking;
+    let booking: IBooking | undefined;
 
     await session.withTransaction(async () => {
       // Atomic capacity guard: only succeeds if there's still room, so two
@@ -36,14 +39,15 @@ export const createBooking = async (
         {
           _id: payload.teeTimeId,
           status: 'ACTIVE',
-          $expr: { $lte: [{ $add: ['$bookedCount', payload.players] }, '$capacity'] },
+          bookedCount: 0,
+          $expr: { $lte: [payload.players, '$capacity'] },
         },
         { $inc: { bookedCount: payload.players } },
         { new: true, session }
       );
 
       if (!teeTime) {
-        throw new AppError(409, 'Not enough slots remain for this tee time');
+        throw new AppError(409, 'This tee time is no longer available or not enough capacity.');
       }
 
       const taxes = Number((teeTime.price * TAX_RATE).toFixed(2));
@@ -75,6 +79,58 @@ export const createBooking = async (
 
       booking = created;
     });
+
+    // Send email notifications asynchronously
+    (async () => {
+      try {
+        if (!booking) return;
+        const fullBooking = await Booking.findById(booking._id).populate<{ course: any, teeTime: any }>('course teeTime');
+        if (!fullBooking) return;
+        const owner = await User.findById(fullBooking.course.owner);
+        if (!owner) return;
+        
+        const dateStr = new Date(fullBooking.teeTime.startTime).toLocaleDateString();
+        const timeStr = new Date(fullBooking.teeTime.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        const emailData = {
+          bookingId: fullBooking.bookingId,
+          courseName: fullBooking.course.name,
+          date: dateStr,
+          time: timeStr,
+          players: fullBooking.players,
+          totalPrice: `$${fullBooking.pricing.total}`,
+          contactName: fullBooking.contact.fullName,
+          contactEmail: fullBooking.contact.email,
+          contactPhone: fullBooking.contact.phone || 'N/A',
+          status: fullBooking.status,
+        };
+
+        // User confirmation
+        await sendMail({
+          to: fullBooking.contact.email,
+          subject: `Booking Request: ${fullBooking.course.name}`,
+          html: renderBookingNotificationEmail({
+            ...emailData,
+            heading: 'Your Booking is Pending',
+            introHtml: `<p>Hi ${fullBooking.contact.fullName},</p><p>We have received your booking request for <strong>${fullBooking.course.name}</strong>. The club owner will review and confirm it shortly.</p>`,
+          })
+        });
+
+        // Admin notification
+        await sendMail({
+          to: owner.email,
+          subject: `New Booking Request: ${fullBooking.course.name}`,
+          html: renderBookingNotificationEmail({
+            ...emailData,
+            heading: 'New Booking Request',
+            introHtml: `<p>Hi ${owner.fullName},</p><p>You have a new booking request. Please review it in your dashboard.</p>`,
+          })
+        });
+
+      } catch (err) {
+        console.error('Failed to send booking emails:', err);
+      }
+    })();
 
     return booking!;
   } finally {
@@ -170,6 +226,57 @@ export const confirmBooking = async (ownerId: string, bookingId: string): Promis
       `Booking ${booking.bookingId} has been confirmed.`
     );
   }
+
+  // Send email notifications asynchronously
+  (async () => {
+    try {
+      const fullBooking = await Booking.findById(booking._id).populate<{ course: any, teeTime: any }>('course teeTime');
+      if (!fullBooking) return;
+      const owner = await User.findById(fullBooking.course.owner);
+      if (!owner) return;
+      
+      const dateStr = new Date(fullBooking.teeTime.startTime).toLocaleDateString();
+      const timeStr = new Date(fullBooking.teeTime.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      const emailData = {
+        bookingId: fullBooking.bookingId,
+        courseName: fullBooking.course.name,
+        date: dateStr,
+        time: timeStr,
+        players: fullBooking.players,
+        totalPrice: `$${fullBooking.pricing.total}`,
+        contactName: fullBooking.contact.fullName,
+        contactEmail: fullBooking.contact.email,
+        contactPhone: fullBooking.contact.phone || 'N/A',
+        status: fullBooking.status,
+      };
+
+      // User confirmation
+      await sendMail({
+        to: fullBooking.contact.email,
+        subject: `Booking Confirmed: ${fullBooking.course.name}`,
+        html: renderBookingNotificationEmail({
+          ...emailData,
+          heading: 'Your Booking is Confirmed',
+          introHtml: `<p>Hi ${fullBooking.contact.fullName},</p><p>Great news! Your booking for <strong>${fullBooking.course.name}</strong> has been confirmed by the club owner.</p>`,
+        })
+      });
+
+      // Admin notification
+      await sendMail({
+        to: owner.email,
+        subject: `Booking Confirmed: ${fullBooking.course.name}`,
+        html: renderBookingNotificationEmail({
+          ...emailData,
+          heading: 'Booking Confirmed',
+          introHtml: `<p>Hi ${owner.fullName},</p><p>You have successfully confirmed this booking.</p>`,
+        })
+      });
+
+    } catch (err) {
+      console.error('Failed to send booking confirmation emails:', err);
+    }
+  })();
 
   return booking;
 };

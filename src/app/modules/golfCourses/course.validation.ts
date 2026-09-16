@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { HOLES_OPTIONS } from './course.constant';
+
 
 // Backs AllClubs.tsx's "Create New Club" modal — provisions a new
 // COURSE_MANAGER account plus a PENDING course in one request.
@@ -10,42 +10,40 @@ export const createCourseSchema = z.object({
 });
 
 const statsSchema = z.object({
-  yardage: z.string().min(1),
-  par: z.coerce.number().min(27).max(90),
-  slope: z.coerce.number().min(55).max(155),
-  rating: z.coerce.number().min(0).max(100),
-  holes: z.coerce.number().refine((v) => (HOLES_OPTIONS as readonly number[]).includes(v), {
-    message: 'holes must be 9 or 18',
-  }),
-  tees: z.coerce.number().min(1),
-  elevation: z.string().min(1),
-  avgTime: z.string().min(1),
-  courseType: z.string().min(1),
-  difficulty: z.string().min(1),
+  yardage: z.string().optional().or(z.literal('')),
+  par: z.coerce.number().optional().or(z.literal(0)),
+  slope: z.coerce.number().optional().or(z.literal(0)),
+  rating: z.coerce.number().optional().or(z.literal(0)),
+  holes: z.coerce.number().optional().or(z.literal(0)),
+  tees: z.coerce.number().optional().or(z.literal(0)),
+  elevation: z.string().optional().or(z.literal('')),
+  avgTime: z.string().optional().or(z.literal('')),
+  courseType: z.string().optional().or(z.literal('')),
+  difficulty: z.string().optional().or(z.literal('')),
 });
 
 const sellingPointSchema = z.object({
-  title: z.string().min(1).max(120),
-  description: z.string().min(1).max(500),
+  title: z.string().max(120).optional().or(z.literal('')),
+  description: z.string().max(500).optional().or(z.literal('')),
 });
 
 const facilitySchema = z.object({
-  name: z.string().min(1).max(120),
-  description: z.string().min(1).max(300),
+  name: z.string().max(120).optional().or(z.literal('')),
+  description: z.string().max(300).optional().or(z.literal('')),
 });
 
 const signatureHoleSchema = z.object({
-  number: z.string().min(1),
-  name: z.string().min(1),
-  par: z.coerce.number(),
-  yardage: z.coerce.number(),
-  notes: z.string().min(1).max(1000),
-  image: z.string().min(1),
+  number: z.string().optional().or(z.literal('')),
+  name: z.string().optional().or(z.literal('')),
+  par: z.coerce.number().optional().or(z.literal(0)),
+  yardage: z.coerce.number().optional().or(z.literal(0)),
+  notes: z.string().max(1000).optional().or(z.literal('')),
+  image: z.string().optional().or(z.literal('')),
 });
 
 const holeVideoSchema = z.object({
-  holeNumber: z.number().int().min(1).max(18),
-  url: z.string().url(),
+  holeNumber: z.coerce.number().optional().or(z.literal(0)),
+  url: z.string().optional().or(z.literal('')),
 });
 
 // Backs EditClub.tsx in full — every field the club-owner form submits.
